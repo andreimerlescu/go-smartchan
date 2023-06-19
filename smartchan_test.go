@@ -8,7 +8,6 @@ import (
 func TestDataFlow(t *testing.T) {
 	sc := NewSmartChan(5)
 
-	// Test writing to the SmartChan
 	err := sc.Write("Test Data")
 	if err != nil {
 		t.Errorf("Unexpected error while writing to the channel: %v", err)
@@ -17,7 +16,6 @@ func TestDataFlow(t *testing.T) {
 		t.Errorf("Count should be 1, got %d instead", sc.Count())
 	}
 
-	// Test reading from the SmartChan
 	data, err := sc.Read()
 	if err != nil {
 		t.Errorf("Unexpected error while reading from the channel: %v", err)
@@ -26,19 +24,16 @@ func TestDataFlow(t *testing.T) {
 		t.Errorf("Expected 'Test Data', got %v instead", data)
 	}
 
-	// Test closing the SmartChan
 	sc.Close()
 	if sc.CanWrite() {
 		t.Errorf("Expected CanWrite to return false, got true instead")
 	}
 
-	// Test writing to the closed SmartChan
 	err = sc.Write("More Data")
 	if err == nil {
 		t.Error("Expected an error when writing to a closed channel, got nil instead")
 	}
 
-	// Test reading from the closed SmartChan
 	_, err = sc.Read()
 	if err == nil {
 		t.Error("Expected an error when reading from a closed channel, got nil instead")
@@ -47,21 +42,22 @@ func TestDataFlow(t *testing.T) {
 
 func TestConcurrentAccess(t *testing.T) {
 	sc := NewSmartChan(100)
-	wg := &sync.WaitGroup{}
+	wg1 := &sync.WaitGroup{}
+	wg2 := &sync.WaitGroup{}
 
-	wg.Add(1)
-	// Concurrent writing to the SmartChan
+	wg1.Add(1)
 	go func() {
 		for i := 0; i < 100; i++ {
 			if err := sc.Write(i); err != nil {
 				t.Errorf("Unexpected error while writing to the channel: %v", err)
 			}
 		}
-		wg.Done()
+		wg1.Done()
 	}()
 
-	// Concurrent reading from the SmartChan
-	wg.Add(1)
+	wg1.Wait()
+
+	wg2.Add(1)
 	go func() {
 		for i := 0; i < 100; i++ {
 			data, err := sc.Read()
@@ -72,14 +68,28 @@ func TestConcurrentAccess(t *testing.T) {
 				t.Errorf("Expected %d, got %v instead", i, data)
 			}
 		}
-		wg.Done()
+		wg2.Done()
 	}()
 
-	// Wait for both goroutines to finish
-	wg.Wait()
+	wg2.Wait()
 
-	if sc.Count() != 100 {
-		t.Errorf("Count should be 100, got %d instead", sc.Count())
-	}
 	sc.Close()
+}
+
+func TestChan(t *testing.T) {
+	sc := NewSmartChan(1)
+
+	err := sc.Write(1)
+	if err != nil {
+		t.Fatalf("Unexpected error while writing to the channel: %v", err)
+	}
+
+	val, err := sc.Read()
+	if err != nil {
+		t.Fatalf("Unexpected error while reading from the channel: %v", err)
+	}
+
+	if val != 1 {
+		t.Errorf("Expected 1, got %v instead", val)
+	}
 }

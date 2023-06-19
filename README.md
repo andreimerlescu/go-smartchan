@@ -2,6 +2,20 @@
 
 The `go_smartchan` package provides a thread-safe, "smart" channel implementation for Go.
 
+## Use Cases
+
+### Handling large volumes of data 
+In standard Go channels, you might run into an issue where you're trying to write to a channel that's full. This situation could block the goroutine that's trying to write to the channel and could potentially lead to a deadlock situation. By using the SmartChan, you can check if you can write to the channel before attempting to write, preventing the blocking situation.
+
+### Safely managing channel closure 
+In Go, closing a channel that's already closed will cause a panic. This can become an issue in complex concurrent programs, where it might not always be straightforward to manage channel lifecycle. The SmartChan struct includes a built-in atomic check to see if the channel is already closed before attempting to close it, avoiding a potential panic situation.
+
+### Non-blocking reads
+The Read method in SmartChan provides a non-blocking alternative to reading from a standard Go channel. In typical Go channels, trying to read from an empty channel will cause the goroutine to block until there's data available. In certain use cases, you might prefer to get an error immediately instead of blocking. The SmartChan.Read() method provides this capability.
+
+### Counting the number of written items
+In certain scenarios, you might need to keep a track of how many items have been written to a channel. With standard Go channels, you'd need to manage this separately, which can be error-prone in a concurrent scenario. SmartChan has a built-in atomic counter that keeps track of the number of written items, providing a threadsafe way to get this count.
+
 ## Description
 
 This package wraps the basic Go channel with additional functionalities such as:
@@ -29,7 +43,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/andreimerlescu/go-smartchan"
+	ch "github.com/andreimerlescu/go-smartchan"
 	"time"
 )
 
@@ -40,7 +54,7 @@ type Data struct {
 
 func main() {
 	// Initialize a new SmartChan with a capacity of 5
-	smartChan := go_smartchan.NewSmartChan(5)
+	smartChan := ch.NewSmartChan(5)
 
 	// Create a context that will automatically cancel after 1 second
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
